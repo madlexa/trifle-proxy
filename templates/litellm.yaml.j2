@@ -1,0 +1,53 @@
+model_list:
+{%- for model in models %}
+  - model_name: {{ model.name }}
+    litellm_params:
+      model: {{ model.provider }}/{{ model.model }}
+      api_key: os.environ/{{ model.env_key }}
+    {%- if model.api_base %}
+      api_base: {{ model.api_base }}
+    {%- endif %}
+    model_info:
+      claude_role: {{ model.role }}
+{%- endfor %}
+
+litellm_settings:
+  drop_params: true
+  master_key: os.environ/LITELLM_MASTER_KEY
+
+# LiteLLM router resilience: retries, provider cooldown (circuit breaker),
+# and model fallbacks. Consumed by LiteLLM itself.
+router_settings:
+  num_retries: 3
+  retry_after: 5
+  timeout: 600
+  # Trip a provider out of rotation after this many failures within a minute.
+  allowed_fails: 5
+  cooldown_time: 30
+{%- if models | length > 1 %}
+  fallbacks:
+  {%- for model in models %}
+    - {{ model.name }}: [{% for other in models if other.name != model.name %}{{ other.name }}{% if not loop.last %}, {% endif %}{% endfor %}]
+  {%- endfor %}
+{%- endif %}
+
+# trifle-proxy process-management resilience (proxy start retries, breaker for
+# health probes). Ignored by LiteLLM. Parsed into trifle-proxy's resilience
+# primitives but NOT applied by the default `start` path yet; the active
+# provider resilience is router_settings above. See docs/architecture.md.
+resilience:
+  retry:
+    max_attempts: 3
+    base_delay: 0.5
+    max_delay: 30.0
+    multiplier: 2.0
+  circuit_breaker:
+    failure_threshold: 5
+    recovery_timeout: 30.0
+    success_threshold: 1
+  fallback_models:
+{%- for model in models %}
+    - {{ model.name }}
+{%- else %}
+    []
+{%- endfor %}
