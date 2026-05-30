@@ -27,6 +27,18 @@ from trifle_proxy.proxy import get_status, start, stop, tail_logs
 # Path for --local mode (current directory)
 LOCAL_CONFIG_PATH = Path("litellm.yaml")
 
+# ASCII art banner
+BANNER = r"""
+  _____    _  __ _
+ |_   _| _(_)/ _| |___
+   | || '_| |  _| / -_)
+  _|_||_| |_|_| |_\___|
+ | _ \_ _ _____ ___  _
+ |  _/ '_/ _ \ \ / || |
+ |_| |_| \___/_\_\\_, |
+                  |__/
+"""
+
 
 def _print(message: str) -> None:
     print(message)
@@ -286,6 +298,7 @@ def cmd_start(args: argparse.Namespace) -> int:
         _print(str(e))
         return 1
 
+    _print(BANNER)
     _print(f"LiteLLM proxy started (PID: {pid})")
     _print(f"URL: http://{args.host}:{args.port}")
 
